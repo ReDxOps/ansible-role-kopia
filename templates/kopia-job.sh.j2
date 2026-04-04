@@ -1,0 +1,34 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+set -euo pipefail
+
+BOLD="\033[1m"
+RED="\033[31m"
+GREEN="\033[32m"
+RESET="\033[0m"
+
+if "{{ kopia_scripts_dir }}/pre-backup.sh"; then
+
+    docker run --rm --name "{{ kopia_backup_agent_name }}" \
+    -e KOPIA_PASSWORD="{{ kopia_password }}" \
+    -e TZ="{{ kopia_timezone }}" \
+    -v "{{ kopia_root_dir }}/config:/app/config" \
+    -v "{{ kopia_root_dir }}/cache:/app/cache:rw" \
+    {% for folder in kopia_folders_to_save %}
+    -v "{{ folder }}:/data{{ folder }}:ro" \
+    {% endfor %}
+    "kopia/kopia:{{ kopia_image_tag }}" \
+    sh -c 'kopia snapshot create {% for folder in kopia_folders_to_save %}"/data{{ folder }}" {% endfor %} && kopia maintenance run --full'
+
+    echo -e "${GREEN}Backup end with success !${RESET}"
+
+    {% if kopia_cleanup_sqldumps_after_backup %}
+
+        echo -e "${BOLD}Cleanup of local databases dumps...${RESET}"
+        rm -f "{{ kopia_local_dump_dir }}"/*sql.gz
+
+    {% endif %}
+else
+    echo -e "\n${RED}The pre backup did not end properly. Backup task aborted.${RESET}"
+fi
+

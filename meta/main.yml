@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+---
+galaxy_info:
+  author: Rémy DUBOIS
+  description: "Robust, encrypted, and compressed off-site backup solution using Kopia with dynamic multi-database dump discovery and Systemd orchestration."
+  license: MIT
+  namespace: redxops
+  role_name: kopia
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - backup
+    - kopia
+    - s3
+    - docker
+    - database
+    - security
+    - systemd
+dependencies: []

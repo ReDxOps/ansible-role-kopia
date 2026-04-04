@@ -1,0 +1,50 @@
+#!/bin/bash
+# SPDX-License-Identifier: MIT
+set -euo pipefail
+
+BOLD="\033[1m"
+RED="\033[31m"
+GREEN="\033[32m"
+RESET="\033[0m"
+DATE="$(date "+%d-%m-%Y_%HH%M")"
+
+CONTAINER_SUFFIX="{{ kopia_container_suffix }}"
+BACKUP_DIR="{{ kopia_local_dump_dir }}"
+
+DB_CONTAINER=$(docker ps --filter "name=$CONTAINER_SUFFIX" --format "{{.Names}}")
+
+if [[ -z "$DB_CONTAINER" ]]; then
+    echo -e "\n No container with suffix '$CONTAINER_SUFFIX' running. Backup task aborted. \n"
+    exit 0
+fi
+
+if [[ ! -d "$BACKUP_DIR" ]]; then
+    echo -e "\n${RED}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${RED}does not exist. Creation in progress..."
+    mkdir -p $BACKUP_DIR
+    echo -e "\n${GREEN}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${GREEN}created !\n"
+fi
+
+for DB in $DB_CONTAINER; do
+
+    CONTAINER_IMAGE="$(docker inspect "$DB" --format '{{.Config.Image}}')"
+
+    if  [[ "$CONTAINER_IMAGE" == *mariadb* ]]; then
+
+        echo -e "${GREEN}MariaDB database backup : ${BOLD}$DB${RESET}"
+        docker exec -i "$DB" sh -c 'export MYSQL_PWD="$MARIADB_ROOT_PASSWORD"; mariadb-dump --all-databases --single-transaction --quick --lock-tables=false -u root' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+
+    elif [[ "$CONTAINER_IMAGE" == *mysql* ]]; then
+
+        echo -e "${GREEN}MySQL database backup : ${BOLD}$DB${RESET}"
+        docker exec -i "$DB" sh -c 'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; mysqldump --all-databases --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u root' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+
+    elif [[ "$CONTAINER_IMAGE" == *postgres* ]]; then
+
+        echo -e "${GREEN}PostgreSQL database backup : ${BOLD}$DB${RESET}"
+        docker exec -i "$DB" sh -c 'export PGPASSWORD="$POSTGRES_PASSWORD"; pg_dumpall -U"$POSTGRES_USER"' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+
+    else
+        echo -e "${RED}This script does not support $DB database providers. The backup task was interrupted.${RESET}"
+        exit 0
+    fi
+done

@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: MIT
+---
+# ==========================================
+# General Role Configuration
+# ==========================================
+kopia_service_name: "kopia"
+kopia_image_tag: "0.15.0"
+kopia_timezone: "Europe/Paris"
+kopia_backup_agent_name: "kopia-backup-agent"
+
+# ==========================================
+# Repository Credentials & Identity
+# ==========================================
+# kopia_password: <VAULTED>
+# kopia_repository_username: <VAULTED>
+kopia_client_hostname: "kopia-backup-host"
+kopia_repository_description: "Backup Repository managed by Ansible"
+
+# ==========================================
+# S3 Backend Configuration
+# ==========================================
+kopia_s3_bucket_name: "my-backups"
+kopia_s3_endpoint_url: "https://my-s3-endpoint.com"
+# kopia_s3_access_key_id: <VAULTED>
+# kopia_s3_access_key_secret: <VAULTED>
+
+# ==========================================
+# Host Paths & Directories
+# ==========================================
+# Root directory for all Kopia files on the host
+kopia_root_dir: "/opt/kopia"
+
+# Sub-directories (Relative to root)
+kopia_local_dump_dir: "{{ kopia_root_dir }}/dumps_sql"
+kopia_scripts_dir: "{{ kopia_root_dir }}/scripts"
+
+# ==========================================
+# Backup Targets & Discovery
+# ==========================================
+# Folders to include in the snapshot
+kopia_folders_to_save:
+  - "/opt/app"
+
+# Databases Discovery
+# Containers with this suffix will be automatically dumped
+kopia_container_suffix: "-db"
+kopia_cleanup_sqldumps_after_backup: true
+
+# ==========================================
+# Retention & Compression Policies
+# ==========================================
+# Retention - How many snapshots to keep
+kopia_policy_keep_daily: 7
+kopia_policy_keep_weekly: 4
+kopia_policy_keep_monthly: 6
+
+# Compression Algorithm (e.g., zstd, s2-default, none)
+kopia_policy_compression: "zstd"
+
+# ==========================================
+# Scheduling & Automation
+# ==========================================
+# Systemd timer syntax: DayOfWeek Year-Month-Day Hour:Minute:Second
+kopia_backup_execution_timer: "*-*-* 03:00:00"
+
+# ==========================================
+# Notifications (SMTP)
+# ==========================================
+kopia_email_report_enabled: false
+kopia_email_report_to: "admin@example.com"
+kopia_email_from: "kopia@example.com"
+kopia_smtp_host: "smtp.example.com"
+kopia_smtp_port: 587
+# kopia_smtp_username: <VAULTED>
+# kopia_smtp_password: <VAULTED>
+
+# ==========================================
+# Ingress & UI (Traefik)
+# ==========================================
+kopia_traefik_enabled: false
+kopia_traefik_network: "proxy"
+kopia_traefik_domain: "kopia.example.com"
+kopia_web_port_expose: 51515
