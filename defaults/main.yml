@@ -3,8 +3,9 @@
 # ==========================================
 # General Role Configuration
 # ==========================================
+kopia_state: present
 kopia_service_name: "kopia"
-kopia_image_tag: "0.15.0"
+kopia_image_tag: "0.22.3"
 kopia_timezone: "Europe/Paris"
 kopia_backup_agent_name: "kopia-backup-agent"
 
@@ -20,7 +21,7 @@ kopia_repository_description: "Backup Repository managed by Ansible"
 # S3 Backend Configuration
 # ==========================================
 kopia_s3_bucket_name: "my-backups"
-kopia_s3_endpoint_url: "https://my-s3-endpoint.com"
+kopia_s3_endpoint_url: "my-s3-endpoint.com"
 # kopia_s3_access_key_id: <VAULTED>
 # kopia_s3_access_key_secret: <VAULTED>
 
@@ -33,6 +34,9 @@ kopia_root_dir: "/opt/kopia"
 # Sub-directories (Relative to root)
 kopia_local_dump_dir: "{{ kopia_root_dir }}/dumps_sql"
 kopia_scripts_dir: "{{ kopia_root_dir }}/scripts"
+
+# Config file path in the container
+kopia_config_path: "/app/config/repository.config"
 
 # ==========================================
 # Backup Targets & Discovery

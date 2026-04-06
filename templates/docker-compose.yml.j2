@@ -7,31 +7,32 @@ services:
     hostname: "{{ kopia_client_hostname }}"
     restart: unless-stopped
     security_opt:
-      - no-new-privileges:true
+      - "no-new-privileges:true"
     volumes:
       - "{{ kopia_root_dir }}/config:/app/config"
       - "{{ kopia_root_dir }}/cache:/app/cache"
-      {% for folder in kopia_folders_to_save %}
+{% for folder in kopia_folders_to_save %}
       - "{{ folder }}:/data{{ folder }}:ro"
-      {% endfor %}
-    {% if not kopia_traefik_enabled %}
+{% endfor %}
+{% if not kopia_traefik_enabled %}
     ports:
       - "{{ kopia_web_port_expose }}:51515"
-    {% endif %}
-    {% if kopia_traefik_enabled %}
+{% endif %}
+{% if kopia_traefik_enabled %}
     networks:
-      - {{ kopia_traefik_network }}
+      - "{{ kopia_traefik_network }}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.{{ kopia_service_name }}.rule=Host(`{{ kopia_traefik_domain }}`)"
       - "traefik.http.routers.{{ kopia_service_name }}.entrypoints=websecure"
       - "traefik.http.routers.{{ kopia_service_name }}.tls=true"
       - "traefik.http.services.{{ kopia_service_name }}.loadbalancer.server.port={{ kopia_web_port_expose }}"
-    {% endif %}
+{% endif %}
     environment:
       KOPIA_PASSWORD: "{{ kopia_password }}"
       USER: "{{ kopia_repository_username }}"
       TZ: "{{ kopia_timezone }}"
+      KOPIA_CONFIG_PATH: "{{ kopia_config_path }}"
     command: >
       server start
       --insecure
@@ -47,18 +48,20 @@ services:
     cap_add:
       - SYS_ADMIN
     devices:
-      - /dev/fuse:/dev/fuse
+      - "/dev/fuse:/dev/fuse"
     volumes:
       - "{{ kopia_root_dir }}/config:/app/config"
       - "{{ kopia_root_dir }}/cache:/app/cache"
-      - /mnt/kopia-restore:/tmp/restore:rshared
+      - "/mnt/kopia-restore:/tmp/restore:rshared"
     environment:
       KOPIA_PASSWORD: "{{ kopia_password }}"
+      USER: "{{ kopia_repository_username }}"
       TZ: "{{ kopia_timezone }}"
-    command: mount all /tmp/restore
+      KOPIA_CONFIG_PATH: "{{ kopia_config_path }}"
+    command: "mount all /tmp/restore"
 
+{% if kopia_traefik_enabled %}
 networks:
-  {% if kopia_traefik_enabled %}
   {{ kopia_traefik_network }}:
     external: true
-  {% endif %}
+{% endif %}

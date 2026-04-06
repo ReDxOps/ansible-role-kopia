@@ -10,15 +10,17 @@ RESET="\033[0m"
 if "{{ kopia_scripts_dir }}/pre-backup.sh"; then
 
     docker run --rm --name "{{ kopia_backup_agent_name }}" \
+    --entrypoint sh \
     -e KOPIA_PASSWORD="{{ kopia_password }}" \
     -e TZ="{{ kopia_timezone }}" \
+    -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}" \
     -v "{{ kopia_root_dir }}/config:/app/config" \
     -v "{{ kopia_root_dir }}/cache:/app/cache:rw" \
     {% for folder in kopia_folders_to_save %}
     -v "{{ folder }}:/data{{ folder }}:ro" \
     {% endfor %}
     "kopia/kopia:{{ kopia_image_tag }}" \
-    sh -c 'kopia snapshot create {% for folder in kopia_folders_to_save %}"/data{{ folder }}" {% endfor %} && kopia maintenance run --full'
+    -c 'kopia snapshot create {% for folder in kopia_folders_to_save %}"/data{{ folder }}" {% endfor %} && kopia maintenance run --full'
 
     echo -e "${GREEN}Backup end with success !${RESET}"
 

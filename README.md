@@ -25,7 +25,7 @@ All variables are defined in [defaults/main.yml](defaults/main.yml).
 |----------|---------|-------------|
 | `kopia_service_name` | `kopia` | Base name for containers and folders |
 | `kopia_root_dir` | `/opt/talos/kopia` | Root directory for config and scripts |
-| `kopia_image_tag` | `0.15.0` | Kopia docker image version |
+| `kopia_image_tag` | `0.22.3` | Kopia docker image version |
 
 ### S3 Backend
 | Variable | Type | Description |
@@ -52,7 +52,7 @@ All variables are defined in [defaults/main.yml](defaults/main.yml).
 - hosts: servers
   become: true
   roles:
-    - role: ReDxOps.kopia
+    - role: redxops.kopia
       vars:
         kopia_s3_bucket_name: "my-backup-bucket"
         kopia_folders_to_save:

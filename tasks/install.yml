@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ kopia_root_dir }}"
+    - "{{ kopia_root_dir }}/config"
+    - "{{ kopia_root_dir }}/cache"
+    - "{{ kopia_local_dump_dir }}"
+    - "{{ kopia_scripts_dir }}"
+
+- name: Copy docker-compose template
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ kopia_root_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Copy .kopiaignore template
+  ansible.builtin.template:
+    src: ".kopiaignore.j2"
+    dest: "{{ item }}/.kopiaignore"
+    mode: "0644"
+  loop: "{{ kopia_folders_to_save }}"
+
+- name: Sync configuration state files
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ kopia_root_dir }}/config/{{ item.dest }}"
+    mode: "0400"
+  loop:
+    - { src: ".state_init.j2", dest: ".state_init" }
+    - { src: ".state_policy.j2", dest: ".state_policy" }
+    - { src: ".state_notification.j2", dest: ".state_notification" }
+  register: state_check_result
+
+- name: Evaluate configuration state
+  ansible.builtin.set_fact:
+    re_init_needed: "{{ state_check_result.results[0].changed }}"
+    policy_sync_needed: "{{ state_check_result.results[1].changed }}"
+    notif_sync_needed: "{{ state_check_result.results[2].changed }}"
+
+- name: Force repository re-initialization on S3 changes
+  ansible.builtin.file:
+    path: "{{ kopia_root_dir }}/config/repository.config"
+    state: absent
+  when: re_init_needed
+
+- name: Check if kopia is initialized
+  ansible.builtin.stat:
+    path: "{{ kopia_root_dir }}/config/repository.config"
+  register: repository_config_result
+
+- name: Kopia initialization
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      repository create s3
+      --endpoint="{{ kopia_s3_endpoint_url | regex_replace('^https?://', '') | regex_replace('/$', '') }}"
+      --bucket="{{ kopia_s3_bucket_name }}"
+      --access-key="{{ kopia_s3_access_key_id }}"
+      --secret-access-key="{{ kopia_s3_access_key_secret }}"
+  when: not repository_config_result.stat.exists
+  changed_when: true
+  check_mode: false
+  no_log: true
+
+- name: Kopia policy configuration
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      policy set --global
+      --keep-daily {{ kopia_policy_keep_daily }}
+      --keep-weekly {{ kopia_policy_keep_weekly }}
+      --keep-monthly {{ kopia_policy_keep_monthly }}
+      --compression {{ kopia_policy_compression }}
+  when: policy_sync_needed or re_init_needed
+  changed_when: true
+  check_mode: false
+  no_log: true
+
+- name: Kopia notification configuration
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      notification profile configure email
+      --profile-name=default
+      --smtp-server="{{ kopia_smtp_host }}"
+      --smtp-port="{{ kopia_smtp_port }}"
+      --smtp-username="{{ kopia_smtp_username }}"
+      --smtp-password="{{ kopia_smtp_password }}"
+      --mail-from="{{ kopia_email_from }}"
+      --mail-to="{{ kopia_email_report_to }}"
+  when: (notif_sync_needed or re_init_needed) and kopia_email_report_enabled
+  changed_when: true
+  check_mode: false
+  no_log: true
+
+- name: Copy Kopia backup bash scripts template
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0700"
+  loop:
+    - { src: "pre-backup.sh.j2", dest: "{{ kopia_scripts_dir }}/pre-backup.sh" }
+    - { src: "kopia-job.sh.j2", dest: "{{ kopia_scripts_dir }}/kopia-job.sh" }
+
+- name: Copy kopia backup systemd timer service template
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+  loop:
+    - { src: "kopia-backup.timer.j2", dest: "/etc/systemd/system/kopia-backup.timer" }
+    - { src: "kopia-backup.service.j2", dest: "/etc/systemd/system/kopia-backup.service" }
+
+- name: Reload systemd daemon to pick up new units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Enable kopia-backup.service
+  ansible.builtin.systemd_service:
+    name: kopia-backup.service
+    enabled: true
+
+- name: Enable and start kopia-backup.timer
+  ansible.builtin.systemd_service:
+    name: kopia-backup.timer
+    state: started
+    enabled: true
