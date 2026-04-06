@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT
+---
+- name: Stop and disable kopia-backup.timer
+  ansible.builtin.systemd_service:
+    name: kopia-backup.timer
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Stop and disable kopia-backup.service
+  ansible.builtin.systemd_service:
+    name: kopia-backup.service
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Stop Kopia containers (if running)
+  community.docker.docker_compose_v2:
+    project_src: "{{ kopia_root_dir }}"
+    state: absent
+  failed_when: false
+
+- name: Remove systemd unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}"
+    state: absent
+  loop:
+    - kopia-backup.timer
+    - kopia-backup.service
+
+- name: Remove .kopiaignore from target folders
+  ansible.builtin.file:
+    path: "{{ item }}/.kopiaignore"
+    state: absent
+  loop: "{{ kopia_folders_to_save }}"
+
+- name: Remove Kopia root directory
+  ansible.builtin.file:
+    path: "{{ kopia_root_dir }}"
+    state: absent
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true

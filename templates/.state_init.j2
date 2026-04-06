@@ -1,0 +1,6 @@
+# Initialization State Tracker - DO NOT EDIT
+# Tracks S3 connection parameters
+endpoint: {{ kopia_s3_endpoint_url }}
+bucket: {{ kopia_s3_bucket_name }}
+access_key: {{ kopia_s3_access_key_id }}
+secret_hash: {{ kopia_s3_access_key_secret | hash('sha256') }}

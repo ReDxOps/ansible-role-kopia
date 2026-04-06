@@ -5,6 +5,8 @@
 *.log
 .molecule/
 
+.vscode
+
 __pycache__/
 *.pyc
 .venv/

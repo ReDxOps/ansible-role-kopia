@@ -1,0 +1,9 @@
+# Notification State Tracker - DO NOT EDIT
+# Tracks SMTP and Email settings
+email_enabled: {{ kopia_email_report_enabled }}
+mail_to: {{ kopia_email_report_to }}
+mail_from: {{ kopia_email_from }}
+smtp_host: {{ kopia_smtp_host }}
+smtp_port: {{ kopia_smtp_port }}
+smtp_user: {{ kopia_smtp_username }}
+smtp_pass_hash: {{ kopia_smtp_password | hash('sha256') }}
