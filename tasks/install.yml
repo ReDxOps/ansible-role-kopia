@@ -56,7 +56,7 @@
 - name: Kopia initialization
   ansible.builtin.command:
     cmd: >
-      docker run --rm
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
       -v "{{ kopia_root_dir }}/config:/app/config"
       -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
       -e KOPIA_PASSWORD="{{ kopia_password }}"
@@ -75,7 +75,7 @@
 - name: Kopia policy configuration
   ansible.builtin.command:
     cmd: >
-      docker run --rm
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
       -v "{{ kopia_root_dir }}/config:/app/config"
       -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
       -e KOPIA_PASSWORD="{{ kopia_password }}"
@@ -94,7 +94,7 @@
 - name: Kopia notification configuration
   ansible.builtin.command:
     cmd: >
-      docker run --rm
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
       -v "{{ kopia_root_dir }}/config:/app/config"
       -e KOPIA_PASSWORD="{{ kopia_password }}"
       -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"

@@ -43,8 +43,11 @@ services:
   {{ kopia_service_name }}_restore:
     image: "kopia/kopia:{{ kopia_image_tag }}"
     container_name: "{{ kopia_service_name }}_restore"
+    hostname: "{{ kopia_client_hostname }}"
     restart: unless-stopped
     profiles: ["restore"]
+    security_opt:
+      - "apparmor:unconfined"
     cap_add:
       - SYS_ADMIN
     devices:
