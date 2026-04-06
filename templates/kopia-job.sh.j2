@@ -10,6 +10,7 @@ RESET="\033[0m"
 if "{{ kopia_scripts_dir }}/pre-backup.sh"; then
 
     docker run --rm --name "{{ kopia_backup_agent_name }}" \
+    --hostname="{{ kopia_client_hostname }}" \
     --entrypoint sh \
     -e KOPIA_PASSWORD="{{ kopia_password }}" \
     -e TZ="{{ kopia_timezone }}" \
