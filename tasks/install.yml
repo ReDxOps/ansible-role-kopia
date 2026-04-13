@@ -53,7 +53,51 @@
     path: "{{ kopia_root_dir }}/config/repository.config"
   register: repository_config_result
 
-- name: Kopia initialization
+- name: Verify Kopia repository health
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      repository status
+  register: health_check_result
+  failed_when: false
+  changed_when: false
+  when: repository_config_result.stat.exists and not re_init_needed
+  no_log: true
+
+- name: Clean up local config if repository is unreachable
+  ansible.builtin.file:
+    path: "{{ kopia_root_dir }}/config/repository.config"
+    state: absent
+  when:
+    - repository_config_result.stat.exists
+    - health_check_result.rc is defined and health_check_result.rc != 0
+  register: cleanup_result
+
+- name: Try to connect to existing Kopia repository
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      repository connect s3
+      --endpoint="{{ kopia_s3_endpoint_url | regex_replace('^https?://', '') | regex_replace('/$', '') }}"
+      --bucket="{{ kopia_s3_bucket_name }}"
+      --access-key="{{ kopia_s3_access_key_id }}"
+      --secret-access-key="{{ kopia_s3_access_key_secret }}"
+  register: connect_result
+  failed_when: false
+  when: not repository_config_result.stat.exists or (cleanup_result.changed | default(false))
+  no_log: true
+
+- name: Kopia initialization (create if connect failed)
   ansible.builtin.command:
     cmd: >
       docker run --rm --hostname="{{ kopia_client_hostname }}"
@@ -67,10 +111,20 @@
       --bucket="{{ kopia_s3_bucket_name }}"
       --access-key="{{ kopia_s3_access_key_id }}"
       --secret-access-key="{{ kopia_s3_access_key_secret }}"
-  when: not repository_config_result.stat.exists
-  changed_when: true
-  check_mode: false
+  register: create_result
+  failed_when: false
+  when:
+    - not repository_config_result.stat.exists or (cleanup_result.changed | default(false))
+    - connect_result.rc != 0
   no_log: true
+
+- name: Finalize initialization check
+  ansible.builtin.fail:
+    msg: "FATAL: Repository already exists on S3 but connection failed. Possible password mismatch or incorrect S3 credentials?"
+  when:
+    - not repository_config_result.stat.exists or (cleanup_result.changed | default(false))
+    - create_result.rc is defined and create_result.rc != 0
+    - "'already initialized' in create_result.stderr or 'already initialized' in create_result.stdout"
 
 - name: Kopia policy configuration
   ansible.builtin.command:
