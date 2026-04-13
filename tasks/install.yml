@@ -94,6 +94,7 @@
       --secret-access-key="{{ kopia_s3_access_key_secret }}"
   register: connect_result
   failed_when: false
+  changed_when: connect_result.rc == 0
   when: not repository_config_result.stat.exists or (cleanup_result.changed | default(false))
   no_log: true
 
@@ -113,6 +114,7 @@
       --secret-access-key="{{ kopia_s3_access_key_secret }}"
   register: create_result
   failed_when: false
+  changed_when: create_result.rc == 0
   when:
     - not repository_config_result.stat.exists or (cleanup_result.changed | default(false))
     - connect_result.rc != 0
