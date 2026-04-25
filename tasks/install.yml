@@ -149,6 +149,19 @@
   check_mode: false
   no_log: true
 
+- name: Set Kopia maintenance owner
+  ansible.builtin.command:
+    cmd: >
+      docker run --rm --hostname="{{ kopia_client_hostname }}"
+      -v "{{ kopia_root_dir }}/config:/app/config"
+      -v "{{ kopia_root_dir }}/cache:/app/cache:rw"
+      -e KOPIA_PASSWORD="{{ kopia_password }}"
+      -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
+      kopia/kopia:{{ kopia_image_tag }}
+      maintenance set --owner={{ kopia_repository_username }}@{{ kopia_client_hostname }}
+  changed_when: true
+  no_log: true
+
 - name: Kopia notification configuration
   ansible.builtin.command:
     cmd: >
