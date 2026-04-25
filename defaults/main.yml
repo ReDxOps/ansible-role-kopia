@@ -85,4 +85,6 @@ kopia_traefik_enabled: false
 kopia_traefik_network: "proxy"
 kopia_traefik_domain: "kopia.example.com"
 kopia_web_port_expose: 51515
+kopia_traefik_entrypoints: "websecure"
 kopia_traefik_certresolver: ""
+kopia_traefik_middlewares: ""
