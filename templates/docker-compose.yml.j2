@@ -38,6 +38,7 @@ services:
     environment:
       KOPIA_PASSWORD: "{{ kopia_password }}"
       USER: "{{ kopia_repository_username }}"
+      KOPIA_SERVER_PASSWORD: "{{ kopia_password }}"
       TZ: "{{ kopia_timezone }}"
       KOPIA_CONFIG_PATH: "{{ kopia_config_path }}"
     command: >
