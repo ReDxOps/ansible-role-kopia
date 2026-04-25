@@ -23,9 +23,13 @@ services:
       - "{{ kopia_traefik_network }}"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network={{ kopia_traefik_network }}"
       - "traefik.http.routers.{{ kopia_service_name }}.rule=Host(`{{ kopia_traefik_domain }}`)"
       - "traefik.http.routers.{{ kopia_service_name }}.entrypoints=websecure"
       - "traefik.http.routers.{{ kopia_service_name }}.tls=true"
+{% if kopia_traefik_certresolver is defined and kopia_traefik_certresolver != "" %}
+      - "traefik.http.routers.{{ kopia_service_name }}.tls.certresolver={{ kopia_traefik_certresolver }}"
+{% endif %}
       - "traefik.http.services.{{ kopia_service_name }}.loadbalancer.server.port={{ kopia_web_port_expose }}"
 {% endif %}
     environment:
