@@ -1,25 +1,15 @@
-# System & OS
-.DS_Store
-Thumbs.db
-lost+found/
+# {{ ansible_managed }}
 
-# Temp directories
-**/cache/
-**/logs/
-**/tmp/
-*.log
+# Default Exclusions
+{% for item in kopia_ignore_default %}
+{{ item }}
+{% endfor %}
 
-# Dev & Deployment
-**/node_modules/
+# Custom Exclusions
+{% for item in kopia_ignore_custom %}
+{{ item }}
+{% endfor %}
 
-#Kopia config and cache directories
+# Kopia specific
 {{ kopia_root_dir }}/config/
 {{ kopia_root_dir }}/cache/
-
-#Satisfactory gamefiles
-**/gamefiles/
-**/gamefiles/
-
-#Unreal Engine
-**/Engine/
-**/Binaries/

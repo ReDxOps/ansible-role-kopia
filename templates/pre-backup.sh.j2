@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
+# {{ ansible_managed }}
+
 set -euo pipefail
 
 BOLD="\033[1m"
@@ -37,7 +39,7 @@ for DB in $DB_CONTAINER; do
 
             export MYSQL_PWD="$DB_PASS"
             mariadb-dump --no-tablespaces --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
-        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        ' > "$BACKUP_DIR/${DB}.sql"
 
     elif docker exec "$DB" sh -c 'command -v mysqldump' >/dev/null 2>&1; then
 
@@ -49,7 +51,7 @@ for DB in $DB_CONTAINER; do
 
             export MYSQL_PWD="$DB_PASS"
             mysqldump --no-tablespaces --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
-        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        ' > "$BACKUP_DIR/${DB}.sql"
 
     elif docker exec "$DB" sh -c 'command -v pg_dumpall' >/dev/null 2>&1; then
 
@@ -65,7 +67,7 @@ for DB in $DB_CONTAINER; do
                 # Sinon, on tente une sauvegarde globale du conteneur
                 pg_dumpall -U "$DB_USER"
             fi
-        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        ' > "$BACKUP_DIR/${DB}.sql"
 
     else
         echo -e "${RED}This script does not support $DB database providers. The backup task was interrupted.${RESET}"

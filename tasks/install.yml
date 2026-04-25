@@ -159,6 +159,7 @@
       -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}"
       kopia/kopia:{{ kopia_image_tag }}
       maintenance set --owner={{ kopia_repository_username }}@{{ kopia_client_hostname }}
+  when: re_init_needed or connect_result.changed or create_result.changed
   changed_when: true
   no_log: true
 
