@@ -11,32 +11,63 @@ DATE="$(date "+%d-%m-%Y_%HH%M")"
 CONTAINER_SUFFIX="{{ kopia_container_suffix }}"
 BACKUP_DIR="{{ kopia_local_dump_dir }}"
 
+
+if [[ ! -d "$BACKUP_DIR" ]]; then
+    echo -e "\n${RED}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${RED}does not exist. Creation in progress..."
+    mkdir -p "$BACKUP_DIR"
+    echo -e "\n${GREEN}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${GREEN}created !\n"
+fi
+
 DB_CONTAINER=$(docker ps --filter "name=$CONTAINER_SUFFIX" --format "{% raw %}{{.Names}}{% endraw %}")
+
+if [ -z "$DB_CONTAINER" ]; then
+    echo -e "\n${RED}No database container found ending with '$CONTAINER_SUFFIX'.${RESET}"
+    exit 0
+fi
 
 for DB in $DB_CONTAINER; do
 
     CONTAINER_IMAGE="$(docker inspect "$DB" --format '{% raw %}{{.Config.Image}}{% endraw %}')"
 
-    if [[ ! -d "$BACKUP_DIR" ]]; then
-        echo -e "\n${RED}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${RED}does not exist. Creation in progress..."
-        mkdir -p $BACKUP_DIR
-        echo -e "\n${GREEN}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${GREEN}created !\n"
-    fi
-
     if  [[ "$CONTAINER_IMAGE" == *mariadb* ]]; then
 
         echo -e "MariaDB database backup : ${BOLD}$DB${RESET}"
-        docker exec -i "$DB" sh -c 'export MYSQL_PWD="$MARIADB_ROOT_PASSWORD"; mariadb-dump --all-databases --single-transaction --quick --lock-tables=false -u root' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        docker exec -i "$DB" sh -c '
+            DB_USER="${MARIADB_USER:-${MYSQL_USER:-root}}"
+            DB_PASS="${MARIADB_PASSWORD:-${MYSQL_PASSWORD:-${MARIADB_ROOT_PASSWORD:-$MYSQL_ROOT_PASSWORD}}}"
+            DB_TARGET="${MARIADB_DATABASE:-${MYSQL_DATABASE:---all-databases}}"
+
+            export MYSQL_PWD="$DB_PASS"
+            mariadb-dump --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
+        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
     elif [[ "$CONTAINER_IMAGE" == *mysql* ]]; then
 
         echo -e "MySQL database backup : ${BOLD}$DB${RESET}"
-        docker exec -i "$DB" sh -c 'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; mysqldump --all-databases --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u root' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        docker exec -i "$DB" sh -c '
+            DB_USER="${MYSQL_USER:-root}"
+            DB_PASS="${MYSQL_PASSWORD:-$MYSQL_ROOT_PASSWORD}"
+            DB_TARGET="${MYSQL_DATABASE:---all-databases}"
+
+            export MYSQL_PWD="$DB_PASS"
+            mysqldump --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
+        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
     elif [[ "$CONTAINER_IMAGE" == *postgres* ]]; then
 
         echo -e "PostgreSQL database backup : ${BOLD}$DB${RESET}"
-        docker exec -i "$DB" sh -c 'export PGPASSWORD="$POSTGRES_PASSWORD"; pg_dumpall -U"$POSTGRES_USER"' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
+        docker exec -i "$DB" sh -c '
+            DB_USER="${POSTGRES_USER:-postgres}"
+            export PGPASSWORD="$POSTGRES_PASSWORD"
+
+            if [ -n "${POSTGRES_DB:-}" ]; then
+                # Si une base spécifique est définie, on la sauvegarde proprement
+                pg_dump -U "$DB_USER" "$POSTGRES_DB"
+            else
+                # Sinon, on tente une sauvegarde globale du conteneur
+                pg_dumpall -U "$DB_USER"
+            fi
+        ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
     else
         echo -e "${RED}This script does not support $DB database providers. The backup task was interrupted.${RESET}"
