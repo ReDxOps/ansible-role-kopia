@@ -13,6 +13,7 @@ if "{{ kopia_scripts_dir }}/pre-backup.sh"; then
     --hostname="{{ kopia_client_hostname }}" \
     --entrypoint sh \
     -e KOPIA_PASSWORD="{{ kopia_password }}" \
+    -e USER="{{ kopia_repository_username }}" \
     -e TZ="{{ kopia_timezone }}" \
     -e KOPIA_CONFIG_PATH="{{ kopia_config_path }}" \
     -v "{{ kopia_root_dir }}/config:/app/config" \
