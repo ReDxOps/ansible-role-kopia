@@ -27,9 +27,7 @@ fi
 
 for DB in $DB_CONTAINER; do
 
-    CONTAINER_IMAGE="$(docker inspect "$DB" --format '{% raw %}{{.Config.Image}}{% endraw %}')"
-
-    if  [[ "$CONTAINER_IMAGE" == *mariadb* ]]; then
+    if docker exec "$DB" command -v mariadb-dump >/dev/null 2>&1; then
 
         echo -e "MariaDB database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '
@@ -38,10 +36,10 @@ for DB in $DB_CONTAINER; do
             DB_TARGET="${MARIADB_DATABASE:-${MYSQL_DATABASE:---all-databases}}"
 
             export MYSQL_PWD="$DB_PASS"
-            mariadb-dump --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
+            mariadb-dump --no-tablespaces --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
         ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
-    elif [[ "$CONTAINER_IMAGE" == *mysql* ]]; then
+    elif docker exec "$DB" command -v mysqldump >/dev/null 2>&1; then
 
         echo -e "MySQL database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '
@@ -50,10 +48,10 @@ for DB in $DB_CONTAINER; do
             DB_TARGET="${MYSQL_DATABASE:---all-databases}"
 
             export MYSQL_PWD="$DB_PASS"
-            mysqldump --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
+            mysqldump --no-tablespaces --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
         ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
-    elif [[ "$CONTAINER_IMAGE" == *postgres* ]]; then
+    elif docker exec "$DB" command -v pg_dumpall >/dev/null 2>&1; then
 
         echo -e "PostgreSQL database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '
