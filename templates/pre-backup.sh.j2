@@ -27,7 +27,7 @@ fi
 
 for DB in $DB_CONTAINER; do
 
-    if docker exec "$DB" command -v mariadb-dump >/dev/null 2>&1; then
+    if docker exec "$DB" sh -c 'command -v mariadb-dump' >/dev/null 2>&1; then
 
         echo -e "MariaDB database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '
@@ -39,7 +39,7 @@ for DB in $DB_CONTAINER; do
             mariadb-dump --no-tablespaces --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
         ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
-    elif docker exec "$DB" command -v mysqldump >/dev/null 2>&1; then
+    elif docker exec "$DB" sh -c 'command -v mysqldump' >/dev/null 2>&1; then
 
         echo -e "MySQL database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '
@@ -51,7 +51,7 @@ for DB in $DB_CONTAINER; do
             mysqldump --no-tablespaces --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
         ' | gzip > "$BACKUP_DIR/${DB}_${DATE}.sql.gz"
 
-    elif docker exec "$DB" command -v pg_dumpall >/dev/null 2>&1; then
+    elif docker exec "$DB" sh -c 'command -v pg_dumpall' >/dev/null 2>&1; then
 
         echo -e "PostgreSQL database backup : ${BOLD}$DB${RESET}"
         docker exec -i "$DB" sh -c '

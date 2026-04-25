@@ -92,6 +92,7 @@
       --bucket="{{ kopia_s3_bucket_name }}"
       --access-key="{{ kopia_s3_access_key_id }}"
       --secret-access-key="{{ kopia_s3_access_key_secret }}"
+      --override-username="{{ kopia_repository_username }}"
   register: connect_result
   failed_when: false
   changed_when: connect_result.rc == 0
@@ -112,6 +113,7 @@
       --bucket="{{ kopia_s3_bucket_name }}"
       --access-key="{{ kopia_s3_access_key_id }}"
       --secret-access-key="{{ kopia_s3_access_key_secret }}"
+      --override-username="{{ kopia_repository_username }}"
   register: create_result
   failed_when: false
   changed_when: create_result.rc == 0
