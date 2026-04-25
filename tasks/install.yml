@@ -144,7 +144,7 @@
       --keep-weekly {{ kopia_policy_keep_weekly }}
       --keep-monthly {{ kopia_policy_keep_monthly }}
       --compression {{ kopia_policy_compression }}
-  when: policy_sync_needed or re_init_needed
+  when: policy_sync_needed or re_init_needed or connect_result.changed or create_result.changed
   changed_when: true
   check_mode: false
   no_log: true
@@ -178,7 +178,7 @@
       --smtp-password="{{ kopia_smtp_password }}"
       --mail-from="{{ kopia_email_from }}"
       --mail-to="{{ kopia_email_report_to }}"
-  when: (notif_sync_needed or re_init_needed) and kopia_email_report_enabled
+  when: (notif_sync_needed or re_init_needed or connect_result.changed or create_result.changed) and kopia_email_report_enabled
   changed_when: true
   check_mode: false
   no_log: true
