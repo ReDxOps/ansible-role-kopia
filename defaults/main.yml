@@ -88,3 +88,20 @@ kopia_web_port_expose: 51515
 kopia_traefik_entrypoints: "websecure"
 kopia_traefik_certresolver: ""
 kopia_traefik_middlewares: ""
+
+# ==========================================
+# Exclusions (.kopiaignore)
+# ==========================================
+# Default exclusions
+kopia_ignore_default:
+  - ".DS_Store"
+  - "Thumbs.db"
+  - "lost+found/"
+  - "**/cache/"
+  - "**/logs/"
+  - "**/tmp/"
+  - "*.log"
+  - "**/node_modules/"
+
+# Custom exclusions for your specific project
+kopia_ignore_custom: []

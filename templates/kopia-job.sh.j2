@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
+# {{ ansible_managed }}
+
 set -euo pipefail
 
 BOLD="\033[1m"
@@ -29,7 +31,7 @@ if "{{ kopia_scripts_dir }}/pre-backup.sh"; then
     {% if kopia_cleanup_sqldumps_after_backup %}
 
         echo -e "${BOLD}Cleanup of local databases dumps...${RESET}"
-        rm -f "{{ kopia_local_dump_dir }}"/*sql.gz
+        rm -f "{{ kopia_local_dump_dir }}"/*.sql
 
     {% endif %}
 else
