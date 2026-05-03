@@ -47,7 +47,7 @@ kopia_folders_to_save:
 
 # Databases Discovery
 # Containers with this suffix will be automatically dumped
-kopia_container_suffix: "-db"
+kopia_container_label: "kopia.backup.target=true"
 kopia_cleanup_sqldumps_after_backup: true
 
 # ==========================================
