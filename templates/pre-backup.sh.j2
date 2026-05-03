@@ -8,9 +8,8 @@ BOLD="\033[1m"
 RED="\033[31m"
 GREEN="\033[32m"
 RESET="\033[0m"
-DATE="$(date "+%d-%m-%Y_%HH%M")"
 
-CONTAINER_SUFFIX="{{ kopia_container_suffix }}"
+CONTAINER_LABEL="{{ kopia_container_label }}"
 BACKUP_DIR="{{ kopia_local_dump_dir }}"
 
 
@@ -20,18 +19,22 @@ if [[ ! -d "$BACKUP_DIR" ]]; then
     echo -e "\n${GREEN}Backup directory ${BOLD}$BACKUP_DIR ${RESET}${GREEN}created !\n"
 fi
 
-DB_CONTAINER=$(docker ps --filter "name=$CONTAINER_SUFFIX" --format "{% raw %}{{.Names}}{% endraw %}")
+DB_CONTAINERS=$(docker ps --filter "label=$CONTAINER_LABEL" --filter "status=running" --format "{% raw %}{{.Names}}{% endraw %}")
 
-if [ -z "$DB_CONTAINER" ]; then
-    echo -e "\n${RED}No database container found ending with '$CONTAINER_SUFFIX'.${RESET}"
+if [ -z "$DB_CONTAINERS" ]; then
+    echo -e "\n${RED}No database container found with '$CONTAINER_LABEL' label.${RESET}"
     exit 0
 fi
 
-for DB in $DB_CONTAINER; do
+for DB in $DB_CONTAINERS; do
+
+    PROJECT_NAME="$(docker inspect "$DB" --format '{% raw %}{{index .Config.Labels "com.docker.compose.project"}}{% endraw %}')"
+    STABLE_NAME="${PROJECT_NAME:-$DB}"
+    CONTAINER_IMAGE="$(docker inspect "$DB" --format '{% raw %}{{.Config.Image}}{% endraw %}')"
 
     if docker exec "$DB" sh -c 'command -v mariadb-dump' >/dev/null 2>&1; then
 
-        echo -e "MariaDB database backup : ${BOLD}$DB${RESET}"
+        echo -e "MariaDB database backup : ${BOLD}$STABLE_NAME${RESET} (Container: $DB)"
         docker exec -i "$DB" sh -c '
             DB_USER="${MARIADB_USER:-${MYSQL_USER:-root}}"
             DB_PASS="${MARIADB_PASSWORD:-${MYSQL_PASSWORD:-${MARIADB_ROOT_PASSWORD:-$MYSQL_ROOT_PASSWORD}}}"
@@ -39,11 +42,11 @@ for DB in $DB_CONTAINER; do
 
             export MYSQL_PWD="$DB_PASS"
             mariadb-dump --no-tablespaces --single-transaction --quick --lock-tables=false -u "$DB_USER" $DB_TARGET
-        ' > "$BACKUP_DIR/${DB}.sql"
+        ' > "$BACKUP_DIR/${STABLE_NAME}.sql"
 
     elif docker exec "$DB" sh -c 'command -v mysqldump' >/dev/null 2>&1; then
 
-        echo -e "MySQL database backup : ${BOLD}$DB${RESET}"
+        echo -e "MySQL database backup : ${BOLD}$STABLE_NAME${RESET} (Container: $DB)"
         docker exec -i "$DB" sh -c '
             DB_USER="${MYSQL_USER:-root}"
             DB_PASS="${MYSQL_PASSWORD:-$MYSQL_ROOT_PASSWORD}"
@@ -51,23 +54,21 @@ for DB in $DB_CONTAINER; do
 
             export MYSQL_PWD="$DB_PASS"
             mysqldump --no-tablespaces --single-transaction --quick --lock-tables=false --set-gtid-purged=OFF -u "$DB_USER" $DB_TARGET
-        ' > "$BACKUP_DIR/${DB}.sql"
+        ' > "$BACKUP_DIR/${STABLE_NAME}.sql"
 
     elif docker exec "$DB" sh -c 'command -v pg_dumpall' >/dev/null 2>&1; then
 
-        echo -e "PostgreSQL database backup : ${BOLD}$DB${RESET}"
+        echo -e "PostgreSQL database backup : ${BOLD}$STABLE_NAME${RESET} (Container: $DB)"
         docker exec -i "$DB" sh -c '
             DB_USER="${POSTGRES_USER:-postgres}"
             export PGPASSWORD="$POSTGRES_PASSWORD"
 
             if [ -n "${POSTGRES_DB:-}" ]; then
-                # Si une base spécifique est définie, on la sauvegarde proprement
                 pg_dump -U "$DB_USER" "$POSTGRES_DB"
             else
-                # Sinon, on tente une sauvegarde globale du conteneur
                 pg_dumpall -U "$DB_USER"
             fi
-        ' > "$BACKUP_DIR/${DB}.sql"
+        ' > "$BACKUP_DIR/${STABLE_NAME}.sql"
 
     else
         echo -e "${RED}This script does not support $DB database providers. The backup task was interrupted.${RESET}"
