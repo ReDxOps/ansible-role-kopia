@@ -4,7 +4,6 @@
 services:
   {{ kopia_service_name }}:
     image: "kopia/kopia:{{ kopia_image_tag }}"
-    container_name: "{{ kopia_service_name }}"
     hostname: "{{ kopia_client_hostname }}"
     restart: unless-stopped
     security_opt:
@@ -34,7 +33,7 @@ services:
 {% if kopia_traefik_certresolver is defined and kopia_traefik_certresolver != "" %}
       - "traefik.http.routers.{{ kopia_service_name }}.tls.certresolver={{ kopia_traefik_certresolver }}"
 {% endif %}
-      - "traefik.http.services.{{ kopia_service_name }}.loadbalancer.server.port={{ kopia_web_port_expose }}"
+      - "traefik.http.services.{{ kopia_service_name }}.loadbalancer.server.port=51515"
 {% endif %}
     environment:
       KOPIA_PASSWORD: "{{ kopia_password }}"
@@ -48,10 +47,24 @@ services:
       --address=0.0.0.0:51515
       --server-username={{ kopia_repository_username }}
       --ui
+    healthcheck:
+      test: ["CMD", "kopia", "repository", "status"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   {{ kopia_service_name }}_restore:
     image: "kopia/kopia:{{ kopia_image_tag }}"
-    container_name: "{{ kopia_service_name }}_restore"
     hostname: "{{ kopia_client_hostname }}"
     restart: unless-stopped
     profiles: ["restore"]
@@ -71,6 +84,21 @@ services:
       TZ: "{{ kopia_timezone }}"
       KOPIA_CONFIG_PATH: "{{ kopia_config_path }}"
     command: "mount all /tmp/restore"
+    healthcheck:
+      test: ["CMD", "kopia", "repository", "status"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 {% if kopia_traefik_enabled %}
 networks:
