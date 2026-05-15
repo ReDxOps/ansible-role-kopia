@@ -3,96 +3,136 @@
 # ==========================================
 # General Role Configuration
 # ==========================================
+
+# Desired state of the Kopia installation (present/absent)
 kopia_state: present
+# Base name used for containers, services and directories
 kopia_service_name: "kopia"
+# Official Kopia Docker image version
 kopia_image_tag: "0.22.3"
+# Timezone for the backup containers
 kopia_timezone: "Europe/Paris"
+# Name of the temporary one-shot backup agent container
 kopia_backup_agent_name: "kopia-backup-agent"
 
 # ==========================================
 # Repository Credentials & Identity
 # ==========================================
+
+# Master password for repository encryption (Recommend using Ansible Vault)
 # kopia_password: <VAULTED>
+# Unique username for this Kopia client instance
 # kopia_repository_username: <VAULTED>
+# Hostname used to identify this client in the repository
 kopia_client_hostname: "kopia-backup-host"
+# Brief description of this repository instance
 kopia_repository_description: "Backup Repository managed by Ansible"
 
 # ==========================================
 # S3 Backend Configuration
 # ==========================================
+
+# Name of your S3-compatible bucket
 kopia_s3_bucket_name: "my-backups"
+# API endpoint for your S3 provider (Cloudflare R2, AWS, etc.)
 kopia_s3_endpoint_url: "my-s3-endpoint.com"
+# S3 Access Key ID (Recommend using Ansible Vault)
 # kopia_s3_access_key_id: <VAULTED>
+# S3 Secret Access Key (Recommend using Ansible Vault)
 # kopia_s3_access_key_secret: <VAULTED>
 
 # ==========================================
 # Host Paths & Directories
 # ==========================================
-# Root directory for all Kopia files on the host
+
+# Root directory on the host where all Kopia files reside
 kopia_root_dir: "/opt/kopia"
 
-# Sub-directories (Relative to root)
+# Sub-directories for database dumps (relative to kopia_root_dir)
 kopia_local_dump_dir: "{{ kopia_root_dir }}/dumps_sql"
+# Directory for backup scripts and systemd orchestration
 kopia_scripts_dir: "{{ kopia_root_dir }}/scripts"
 
-# Config file path in the container
+# Internal path to the repository configuration file
 kopia_config_path: "/app/config/repository.config"
 
 # ==========================================
 # Backup Targets & Discovery
 # ==========================================
-# Folders to include in the snapshot
+
+# List of host directories to include in the periodic snapshots
 kopia_folders_to_save:
   - "/opt/app"
 
-# Databases Discovery
-# Containers with this suffix will be automatically dumped
+# Automated Database Discovery
+# Containers with this LABEL will be automatically detected and dumped
 kopia_container_label: "kopia.backup.target=true"
+# Whether to delete local .sql dumps after successful upload to S3
 kopia_cleanup_sqldumps_after_backup: true
 
 # ==========================================
 # Retention & Compression Policies
 # ==========================================
-# Retention - How many snapshots to keep
+
+# Number of daily snapshots to preserve
 kopia_policy_keep_daily: 7
+# Number of weekly snapshots to preserve
 kopia_policy_keep_weekly: 4
+# Number of monthly snapshots to preserve
 kopia_policy_keep_monthly: 6
 
-# Compression Algorithm (e.g., zstd, s2-default, none)
+# Compression algorithm (e.g., zstd, s2-default, none)
 kopia_policy_compression: "zstd"
 
 # ==========================================
 # Scheduling & Automation
 # ==========================================
-# Systemd timer syntax: DayOfWeek Year-Month-Day Hour:Minute:Second
+
+# Frequency of backup execution (Systemd timer syntax)
 kopia_backup_execution_timer: "*-*-* 03:00:00"
 
 # ==========================================
 # Notifications (SMTP)
 # ==========================================
+
+# Whether to send email reports after backup jobs
 kopia_email_report_enabled: false
+# Recipient email address for reports
 kopia_email_report_to: "admin@example.com"
+# Sender email address
 kopia_email_from: "kopia@example.com"
+# SMTP server host
 kopia_smtp_host: "smtp.example.com"
+# SMTP server port (usually 587 or 465)
 kopia_smtp_port: 587
+# SMTP Authentication (Recommend using Ansible Vault)
 # kopia_smtp_username: <VAULTED>
 # kopia_smtp_password: <VAULTED>
 
 # ==========================================
 # Ingress & UI (Traefik)
 # ==========================================
+
+# Whether to enable Traefik labels and join the proxy network
 kopia_traefik_enabled: false
+# Docker network name where Traefik is running
 kopia_traefik_network: "proxy"
+# Domain name to access the Kopia Web UI
 kopia_traefik_domain: "kopia.example.com"
+# Port to expose the Web UI on the host (if Traefik is disabled)
 kopia_web_port_expose: 51515
+# Traefik entrypoints (e.g., 'web', 'websecure')
 kopia_traefik_entrypoints: "websecure"
+# Traefik certresolver for Let's Encrypt
 kopia_traefik_certresolver: ""
+# Traefik middleware chain (optional)
 kopia_traefik_middlewares: ""
 
 # ==========================================
 # Exclusions (.kopiaignore)
 # ==========================================
-# Default exclusions
+
+# Default patterns to ignore in snapshots
 kopia_ignore_default:
   - ".DS_Store"
   - "Thumbs.db"
@@ -103,5 +143,5 @@ kopia_ignore_default:
   - "*.log"
   - "**/node_modules/"
 
-# Custom exclusions for your specific project
+# User-defined exclusion patterns
 kopia_ignore_custom: []
